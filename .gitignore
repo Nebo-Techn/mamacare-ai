@@ -6,3 +6,4 @@ vectorstore/__pycache__
 backend/__pycache__
 .venv
 pipeline/extraction/__pycache__/
+pipeline/__pycache__/
