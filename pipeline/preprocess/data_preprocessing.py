@@ -32,12 +32,11 @@ data = {
     "Nini cha kufanya na kuepuka katika trimester ya kwanza ya ujauzito?": "https://continentalhospitals.com/sw/blog/what-to-do-and-avioid-in-the-first-trimester-of-pregnancy/",
     "Maumivu ya Kichwa Wakati wa Ujauzito": "https://afyatrack.com/maumivu-ya-kichwa-wakati-wa-ujauzito/",
     "Tanzmed - Sababu na Dalili za kuharibika mimba sehemu ya 1": "https://tanzmed.co.tz/watoto-uzazi/magonjwa-na-uzazi-wanawake/item/330-kuharibika-kwa-mimba-termination-of-pregnancy-miscarriage-sehemu-ya-kwanza.html",
-
 }
 
 chunks = []
 
-# Load web content
+# Load web content from scraped_content
 for file in Path("scraped_content").glob("*.txt"):
     url = data.get(file.stem, "") 
     with open(file, "r", encoding="utf-8") as f:
@@ -50,8 +49,22 @@ for file in Path("scraped_content").glob("*.txt"):
                 "source": url
             })
 
+# Load Facebook posts from facebook_posts folder
+for file in Path("facebook_posts").glob("*.txt"):
+    with open(file, "r", encoding="utf-8") as f:
+        text = f.read()
+    # Use filename as source if no mapping
+    source = file.stem
+    for chunk in textwrap.wrap(text, width=500):
+        if len(chunk.strip()) > 100:
+            chunks.append({
+                "text": chunk.strip(),
+                "source": source
+            })
+
 print(f"Total chunks created: {len(chunks)}")   
 print(f"Example chunk: {chunks[-5:]}")
+
 # Save as pickle
 with open("trimester1_chunks.pkl", "wb") as f:
     pickle.dump(chunks, f)
