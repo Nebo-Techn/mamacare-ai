@@ -25,11 +25,6 @@ def build_rag_prompt(context_chunks: List[Dict[str, str]], user_query: str) -> s
         "Jibu swali lifuatalo kwa Kiswahili, ukitumia tu taarifa kutoka kwenye muktadha. "
         "Tafadhali orodhesha dalili za mimba changa kwa kutumia alama za nukta (•) na taja chanzo cha kila dalili."
     )
-    context = "\n\n".join([f"Chanzo: {c['source']}\nMaandishi: {c['text']}" for c in context_chunks])
-    prompt = (
-        f"{system_prompt}\n\nMuktadha:\n{context}\n\n"
-        f"Swali: {user_query}\n"
-        "Jibu kwa kutumia taarifa kutoka kwenye muktadha pekee, na orodhesha dalili kwa nukta na chanzo."
-        "\nJibu:"
-    )
+    context = "\n\n".join([f"Chanzo: {c['source']}\nJibu: {c['text']}" for c in context_chunks])
+    prompt = f"{system_prompt}\n\nMuktadha:\n{context}\n\nSwali: {user_query}\nJibu:"
     return prompt

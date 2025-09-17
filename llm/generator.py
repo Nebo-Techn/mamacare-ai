@@ -1,13 +1,27 @@
 import aiohttp
 import asyncio
 from typing import Dict, Any
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
 class AsyncLLMGenerator:
-    def __init__(self, ollama_url: str, model: str):
-        self.ollama_url = ollama_url.rstrip("/")
-        self.model = model
+    def __init__(self, model_path: str = "./lora_maternal_model"):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.model = AutoModelForCausalLM.from_pretrained(model_path)
 
-    async def generate(self, prompt: str, options: Dict[str, Any] = None) -> str:
+    async def generate(self, prompt: str, max_new_tokens: int = 256) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                pad_token_id=self.tokenizer.eos_token_id
+            )
+        answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Remove the prompt from the output, keep only the answer
+        return answer.replace(prompt, "").strip()
+
+    async def generate_legacy(self, prompt: str, options: Dict[str, Any] = None) -> str:
         payload = {
             "model": self.model,
             "prompt": prompt,
