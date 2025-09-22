@@ -15,11 +15,28 @@ class AsyncLLMGenerator:
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
-                pad_token_id=self.tokenizer.eos_token_id
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,      # ensure clean stop
+                do_sample=False,                                # optional: add sampling for more natural answers
+                top_p=0.9,                                     # nucleus sampling 
+                temperature=1.0                                # control creativity vs determinism
             )
-        answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         # Remove the prompt from the output, keep only the answer
-        return answer.replace(prompt, "").strip()
+
+        if prompt in decoded:
+            answer = decoded.split(prompt, 1)[-1].strip()
+
+        else:
+            answer = decoded.strip()
+
+        if "Mwisho wa jibu" in answer:
+            answer = answer.split("Mwisho wa jibu")[0].strip()
+
+        import re
+        answer = re.sub(r'\s+', ' ', answer).strip()
+
+        return answer
 
     async def generate_legacy(self, prompt: str, options: Dict[str, Any] = None) -> str:
         payload = {
