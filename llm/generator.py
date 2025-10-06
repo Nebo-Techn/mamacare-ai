@@ -1,74 +1,71 @@
 import aiohttp
 import asyncio
-from typing import Dict, Any
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from typing import Dict, Any, Optional
+import os
 import torch
 
-class AsyncLLMGenerator:
-    def __init__(self, model_path: str = "./lora_maternal_model"):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForCausalLM.from_pretrained(model_path)
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline as hf_pipeline
 
-    async def generate(self, prompt: str, max_new_tokens: int = 256) -> str:
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,      # ensure clean stop
-                do_sample=False,                                # optional: add sampling for more natural answers
-                top_p=0.9,                                     # nucleus sampling 
-                temperature=1.0                                # control creativity vs determinism
-            )
-        decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Remove the prompt from the output, keep only the answer
+try:
+    from langchain import HuggingFacePipeline
+except Exception:
+    HuggingFacePipeline = None
 
-        if prompt in decoded:
-            answer = decoded.split(prompt, 1)[-1].strip()
 
-        else:
-            answer = decoded.strip()
+class Generator:
+    """
+    Unified generator that wraps a local Hugging Face model via transformers pipeline.
+    - Initializes tokenizer/model from a local path (or HF repo) with optional use_auth_token.
+    - Provides async `generate` which runs the sync pipeline in an executor and returns generated text.
+    """
 
-        if "Mwisho wa jibu" in answer:
-            answer = answer.split("Mwisho wa jibu")[0].strip()
+    def __init__(self, local_model_path: Optional[str] = None, hf_token: Optional[str] = None):
+        self.local_model_path = local_model_path
+        self.hf_token = hf_token
+        self._pipeline = None
+        self.llm = None
+        if self.local_model_path:
+            self._init_local_model()
 
-        import re
-        answer = re.sub(r'\s+', ' ', answer).strip()
+    def _init_local_model(self):
+        device = 0 if torch.cuda.is_available() else -1
 
-        return answer
+        tokenizer = AutoTokenizer.from_pretrained(self.local_model_path, use_auth_token=self.hf_token)
+        model = AutoModelForCausalLM.from_pretrained(self.local_model_path, use_auth_token=self.hf_token)
 
-    async def generate_legacy(self, prompt: str, options: Dict[str, Any] = None) -> str:
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-        }
-        if options:
-            payload.update(options)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.ollama_url}/api/generate", json=payload) as response:
-                result = await response.json()
-                return result.get("response", "")
-            
-    @staticmethod
-    async def generate_answer_ollama(prompt: str, model: str = "gemma:2b"):
-        url = "http://localhost:11434/api/generate"
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                return data.get("response", "")
+        # create a transformers pipeline (sync)
+        self._pipeline = hf_pipeline(
+            "text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            device=device,
+            return_full_text=True
+        )
 
-    # Usage example:
-    # import asyncio
-    # from llm.prompter import build_rag_prompt
-    # context_chunks = [...]  # from retriever
-    # user_query = "Dalili za mimba changa ni zipi?"
-    # prompt = build_rag_prompt(context_chunks, user_query)
-    # answer = asyncio.run(generate_answer_ollama(prompt))
-    # print(answer)
+        # optional LangChain wrapper (kept for compatibility)
+        if HuggingFacePipeline is not None:
+            try:
+                self.llm = HuggingFacePipeline(pipeline=self._pipeline)
+            except Exception:
+                self.llm = None
+
+    async def generate(self, prompt: str, max_new_tokens: int = 256, do_sample: bool = False) -> str:
+        """
+        Async wrapper around the transformers pipeline.
+        Returns the generated text with the prompt stripped when present.
+        """
+        if self._pipeline is None:
+            raise RuntimeError("No model initialized. Provide local_model_path when creating Generator.")
+
+        loop = asyncio.get_event_loop()
+
+        def _call_pipeline():
+            outputs = self._pipeline(prompt, max_new_tokens=max_new_tokens, do_sample=do_sample)
+            return outputs[0].get("generated_text", "")
+
+        generated = await loop.run_in_executor(None, _call_pipeline)
+
+        # strip the prompt from the generated text if included
+        if generated.startswith(prompt):
+            return generated[len(prompt):].strip()
+        return generated.strip()
