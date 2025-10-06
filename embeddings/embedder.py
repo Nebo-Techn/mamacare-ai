@@ -1,29 +1,46 @@
-from sentence_transformers import SentenceTransformer
+from typing import List, Optional
 import asyncio
-from typing import List
 import pickle
 import numpy as np
 
+from langchain.embeddings import HuggingFaceEmbeddings
+
 class AsyncEmbedder:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        self.model = SentenceTransformer(model_name)
+    """
+    Async wrapper around LangChain's HuggingFaceEmbeddings.
+
+    Usage:
+        embedder = AsyncEmbedder(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+        embeddings = await embedder.embed_texts(["text1", "text2"])
+    """
+    def __init__(self, model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device: str = "cpu"):
+        # device can be "cpu" or "cuda"
+        self.model_name = model_name
+        self.device = device
+        self._embedder = HuggingFaceEmbeddings(model_name=self.model_name, model_kwargs={"device": self.device})
 
     async def embed_text(self, text: str) -> List[float]:
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.model.encode, text)
+        # call embed_documents with single-item list in executor
+        vecs = await loop.run_in_executor(None, self._embedder.embed_documents, [text])
+        return vecs[0]
 
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        tasks = [self.embed_text(text) for text in texts]
-        return await asyncio.gather(*tasks)
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._embedder.embed_documents, texts)
 
     @staticmethod
-    async def embed_and_save_chunks(chunk_file: str, embedding_file: str):
+    async def embed_and_save_chunks(chunk_file: str, embedding_file: str, model_name: Optional[str] = None, device: str = "cpu"):
+        """
+        Load chunks (pickle list of dicts with 'text'), embed using LangChain HuggingFaceEmbeddings
+        and save {"embeddings": np.array, "chunks": chunks} to embedding_file (pickle).
+        """
         # Load chunks
         with open(chunk_file, "rb") as f:
             chunks = pickle.load(f)
         texts = [chunk["text"] for chunk in chunks]
 
-        embedder = AsyncEmbedder()
+        embedder = AsyncEmbedder(model_name=model_name or "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device=device)
         embeddings = await embedder.embed_texts(texts)
         embeddings = np.array(embeddings)
 

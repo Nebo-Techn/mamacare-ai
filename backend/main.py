@@ -84,3 +84,6 @@ async def ask_question(request: AskRequest):
     return JSONResponse({"answer": answer, "sources": context_chunks, "source_names": sources})
 
 # To run: uvicorn backend.main:app --reload
+
+#Read token: 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
+
