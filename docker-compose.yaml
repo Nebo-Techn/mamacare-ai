@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  afyamama:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: afyamama_ai:latest
+    container_name: afyamama_ai
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - FAISS_PATH=/app/faiss_local
+    volumes:
+      - ./faiss_local:/app/faiss_local
+      - ./data:/app/data
+
+    restart: unless-stopped
