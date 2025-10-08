@@ -3,7 +3,7 @@ import asyncio
 import pickle
 import numpy as np
 
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 class AsyncEmbedder:
     """
