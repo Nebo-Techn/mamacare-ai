@@ -8,3 +8,6 @@ backend/__pycache__
 pipeline/extraction/__pycache__/
 pipeline/__pycache__/
 __pycache__
+.env
+*.pyc
+lora_maternal_model/
