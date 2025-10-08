@@ -1,0 +1,29 @@
+{
+  "name": "RAG Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github"
+      ]
+    }
+  },
+  "forwardPorts": [8000],
+  "remoteEnv": {
+    "HF_TOKEN": "${{ secrets.HF_TOKEN }}",
+    "BASE_MODEL_LOCAL": "/workspaces/${{github.repository}}/lora_maternal_model"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/lora_maternal_model,target=/workspaces/${localWorkspaceFolderBasename}/lora_maternal_model,type=bind,consistency=cached"
+  ]
+}
