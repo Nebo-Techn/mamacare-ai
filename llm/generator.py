@@ -2,38 +2,86 @@ import aiohttp
 import asyncio
 from typing import Dict, Any, Optional
 import os
+from peft import PeftModel
 import torch
+import os
+from pathlib import Path
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline as hf_pipeline
 
 try:
-    from langchain import HuggingFacePipeline
+    from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 except Exception:
     HuggingFacePipeline = None
+
+LOCAL_MODEL_DIR = r"C:\Users\User\Documents\mamacare_project\Afyamama_AI\LORA_MATERNAL_MODEL\models--NeboTech--maternal-chatbot-swaLlama"
 
 
 class Generator:
     """
     Unified generator that wraps a local Hugging Face model via transformers pipeline.
-    - Initializes tokenizer/model from a local path (or HF repo) with optional use_auth_token.
+    - Detects nested snapshot folders (snapshots/<hash>) under provided local_model_path.
+    - Loads full model or loads base + applies PEFT/LoRA adapter if adapter-only.
     - Provides async `generate` which runs the sync pipeline in an executor and returns generated text.
     """
 
-    def __init__(self, local_model_path: Optional[str] = None, hf_token: Optional[str] = None):
+    def __init__(self, local_model_path: Optional[str] = None, hf_token: Optional[str] = None, device="cuda"):
         self.local_model_path = local_model_path
-        self.hf_token = hf_token
+        self.hf_token = hf_token or os.getenv("HF_TOKEN")
         self._pipeline = None
+        self.device = device
         self.llm = None
         if self.local_model_path:
             self._init_local_model()
 
+    def _find_model_dir(self, base: Path) -> Path:
+        for root, dirs, files in os.walk(base):
+            files_set = set(files)
+            if any(n in files_set for n in ("tokenizer.json", "tokenizer_config.json", "adapter_config.json", "adapter_model.safetensors", "pytorch_model.bin", "pytorch_model.safetensors", "config.json")):
+                return Path(root)
+        raise FileNotFoundError(f"No model snapshot directory found under {base}")
+
     def _init_local_model(self):
         device = 0 if torch.cuda.is_available() else -1
 
-        tokenizer = AutoTokenizer.from_pretrained(self.local_model_path, use_auth_token=self.hf_token)
-        model = AutoModelForCausalLM.from_pretrained(self.local_model_path, use_auth_token=self.hf_token)
+        model_path = Path(self.local_model_path)
+        if not model_path.exists():
+            raise FileNotFoundError(f"local_model_path not found: {model_path}")
 
-        # create a transformers pipeline (sync)
+        model_dir = self._find_model_dir(model_path)
+        hf_token = self.hf_token
+
+        has_full = any(model_dir.joinpath(n).exists() for n in ("pytorch_model.bin", "pytorch_model.safetensors"))
+        has_adapter = any(model_dir.joinpath(n).exists() for n in ("adapter_model.bin", "adapter_model.safetensors", "adapter_config.json"))
+
+        if has_adapter and not has_full:
+            # LoRA adapter detected
+            base_local = "Jacaranda/UlizaLlama"
+            base_hf = "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"  # e.g. "meta-llama/Llama-2-7b-chat-hf"
+
+            if base_local and Path(base_local).exists():
+                print(f"Loading base model from local: {base_local}")
+                tokenizer = AutoTokenizer.from_pretrained(base_local, use_auth_token=hf_token)
+                base = AutoModelForCausalLM.from_pretrained(base_local, use_auth_token=hf_token, device_map="auto")
+            elif base_hf:
+                print(f"Loading base model from HF: {base_hf}")
+                tokenizer = AutoTokenizer.from_pretrained(base_hf, use_auth_token=hf_token)
+                base = AutoModelForCausalLM.from_pretrained(base_hf, use_auth_token=hf_token, device_map="auto")
+            else:
+                raise RuntimeError(
+                    "LoRA adapter detected but no base model configured.\n"
+                    "Set BASE_MODEL_LOCAL=<path_to_base_model> or BASE_MODEL_HF=<huggingface_repo_name>."
+                )
+
+            # Merge base + adapter
+            print(f"Applying adapter from {model_dir}")
+            model = PeftModel.from_pretrained(base, model_dir, use_auth_token=hf_token, device_map="auto")
+
+        else:
+            # Full model
+            tokenizer = AutoTokenizer.from_pretrained(model_dir, use_auth_token=hf_token)
+            model = AutoModelForCausalLM.from_pretrained(model_dir, use_auth_token=hf_token, device_map="auto")
+
         self._pipeline = hf_pipeline(
             "text-generation",
             model=model,
@@ -42,12 +90,11 @@ class Generator:
             return_full_text=True
         )
 
-        # optional LangChain wrapper (kept for compatibility)
-        if HuggingFacePipeline is not None:
-            try:
-                self.llm = HuggingFacePipeline(pipeline=self._pipeline)
-            except Exception:
-                self.llm = None
+        try:
+            self.llm = HuggingFacePipeline(pipeline=self._pipeline)
+        except Exception:
+            self.llm = None
+
 
     async def generate(self, prompt: str, max_new_tokens: int = 256, do_sample: bool = False) -> str:
         """
