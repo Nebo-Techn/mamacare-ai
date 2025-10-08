@@ -1,5 +1,5 @@
 from typing import List, Dict
-from langchain import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 def preprocess_chunks(context_chunks: List[Dict[str, str]]) -> List[Dict[str, str]]:
     seen_texts = set()
@@ -12,10 +12,8 @@ def preprocess_chunks(context_chunks: List[Dict[str, str]]) -> List[Dict[str, st
         if text in seen_texts:
             continue
         seen_texts.add(text)
-        # Prioritize chunks mentioning "dalili" or containing bullet points
         if "dalili" in text.lower() or "ishara" in text.lower() or "•" in text or "-" in text:
             filtered.append({"text": text, "source": source})
-    # If none found, fallback to all cleaned chunks
     return filtered if filtered else [{"text": c.get("text","").strip(), "source": (c.get("source") or "local")} for c in context_chunks if c.get("text","").strip()]
 
 def get_rag_prompt_template() -> PromptTemplate:
