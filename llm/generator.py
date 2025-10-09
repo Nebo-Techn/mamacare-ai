@@ -31,8 +31,14 @@ class Generator:
         self._pipeline = None
         self.device = device
         self.llm = None
-        if self.local_model_path:
-            self._init_local_model()
+        # Try to initialize but never crash the app if models are unavailable
+        try:
+            if self.local_model_path:
+                self._init_local_model()
+        except Exception as e:
+            print(f"[Generator] Skipping local model init: {e}")
+            self._pipeline = None
+            self.llm = None
 
     def _find_model_dir(self, base: Path) -> Path:
         for root, dirs, files in os.walk(base):
@@ -56,26 +62,26 @@ class Generator:
 
         if has_adapter and not has_full:
             # LoRA adapter detected
-            base_local = "Jacaranda/UlizaLlama"
-            base_hf = "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"  # e.g. "meta-llama/Llama-2-7b-chat-hf"
+            base_local = os.getenv("BASE_MODEL_LOCAL", "").strip()
+            base_hf = os.getenv("BASE_MODEL_HF", "").strip()  # e.g. "meta-llama/Llama-2-7b-chat-hf"
 
             if base_local and Path(base_local).exists():
                 print(f"Loading base model from local: {base_local}")
-                tokenizer = AutoTokenizer.from_pretrained(base_local, use_auth_token=hf_token)
-                base = AutoModelForCausalLM.from_pretrained(base_local, use_auth_token=hf_token, device_map="auto")
+                tokenizer = AutoTokenizer.from_pretrained(base_local, token=hf_token)
+                base = AutoModelForCausalLM.from_pretrained(base_local, token=hf_token, device_map="auto")
             elif base_hf:
                 print(f"Loading base model from HF: {base_hf}")
-                tokenizer = AutoTokenizer.from_pretrained(base_hf, use_auth_token=hf_token)
-                base = AutoModelForCausalLM.from_pretrained(base_hf, use_auth_token=hf_token, device_map="auto")
+                tokenizer = AutoTokenizer.from_pretrained(base_hf, token=hf_token)
+                base = AutoModelForCausalLM.from_pretrained(base_hf, token=hf_token, device_map="auto")
             else:
                 raise RuntimeError(
-                    "LoRA adapter detected but no base model configured.\n"
-                    "Set BASE_MODEL_LOCAL=<path_to_base_model> or BASE_MODEL_HF=<huggingface_repo_name>."
+                    "LoRA adapter detected but no base model configured. "
+                    "Provide BASE_MODEL_LOCAL or BASE_MODEL_HF environment variable."
                 )
 
             # Merge base + adapter
             print(f"Applying adapter from {model_dir}")
-            model = PeftModel.from_pretrained(base, model_dir, use_auth_token=hf_token, device_map="auto")
+            model = PeftModel.from_pretrained(base, model_dir, token=hf_token, device_map="auto")
 
         else:
             # Full model
