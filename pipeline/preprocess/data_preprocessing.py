@@ -38,7 +38,7 @@ chunks = []
 
 # Load web content from scraped_content
 for file in Path("scraped_content").glob("*.txt"):
-    url = data.get(file.stem, "") 
+    url = data.get(file.stem, "")
     with open(file, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -62,7 +62,7 @@ for file in Path("facebook_posts").glob("*.txt"):
                 "source": source
             })
 
-print(f"Total chunks created: {len(chunks)}")   
+print(f"Total chunks created: {len(chunks)}")
 print(f"Example chunk: {chunks[-5:]}")
 
 # Save as pickle
