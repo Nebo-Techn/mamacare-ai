@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 import whisper
 
-from pipeline.extraction.db_utils import save_extracted_data
+
 from pipeline.extraction.helpers.process_link import process_links
 
 # Initialize Whisper model (small/medium/large)
