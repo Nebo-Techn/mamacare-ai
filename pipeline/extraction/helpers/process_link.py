@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict
 from pipeline.extraction.helpers import get_youtube_transcript, save_content, scrape_website_content
+from pipeline.extraction.helpers.facebook_scraper import extract_facebook_post
 
 
 async def process_link(name: str, url: str):
@@ -8,6 +9,9 @@ async def process_link(name: str, url: str):
     print(f"Processing: {name} ({url})")
     if "youtube.com" in url or "youtu.be" in url:
         content = await get_youtube_transcript(url, name)
+
+    elif "facebook.com" in url:
+        content = await extract_facebook_post(url, name)
     else:
         content = await scrape_website_content(url)
 
