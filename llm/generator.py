@@ -18,8 +18,7 @@ class Generator:
     - Provides async `generate` for easy integration in RAG or chat APIs.
     """
 
-    def __init__(self, 
-                 model_id: str,
+    def __init__(self,model_id: str,
                  hf_token: Optional[str] = None,
                  device: str = "cuda"):
         """
