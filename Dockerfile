@@ -1,26 +1,39 @@
 FROM python:3.11-slim
 
-
-ENV  PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-
+# Set working directory
 WORKDIR /app
 
-COPY requirements.txt /app/requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    ffmpeg \
+    libmagic1 \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy lightweight requirements first for better caching
+COPY requirements-backend-light.txt .
 
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# Install Python dependencies
+RUN pip install --default-timeout=100 --no-cache-dir -r requirements-backend-light.txt
 
+# Copy application code
+COPY . .
 
-COPY . /app
+# Create necessary directories
+RUN mkdir -p /app/data /app/scraped_content /app/facebook_posts /app/faiss_local
 
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose ports
 EXPOSE 8000
 
-ENV HF_TOKEN=""
-ENV FAISS_PATH=/app/faiss_local
-ENV PYTHONPATH=/app
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-RUN mkdir -p /app/faiss_local /app/data
-
-CMD [ "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Default command
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
