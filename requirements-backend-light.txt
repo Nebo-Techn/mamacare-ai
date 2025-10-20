@@ -1,0 +1,60 @@
+# Core API
+fastapi
+uvicorn[standard]
+requests
+pydantic
+
+# Database
+sqlalchemy
+asyncpg
+alembic
+
+# Basic ML (lightweight)
+numpy
+sentence-transformers
+
+# Web scraping (lightweight)
+beautifulsoup4
+lxml
+requests-html
+
+# File processing
+PyPDF2
+python-docx
+python-magic
+
+# Async utilities
+aiofiles
+asyncio-throttle
+
+# Logging
+structlog
+python-json-logger
+
+# Data processing
+pandas
+openpyxl
+
+# Environment
+python-dotenv
+python-multipart
+
+# Security
+cryptography
+passlib[bcrypt]
+
+# Background tasks
+celery
+redis
+
+# Configuration
+PyYAML
+
+# Audio processing (lightweight)
+pydub
+
+# YouTube (lightweight)
+youtube-transcript-api
+pytube
+
+
