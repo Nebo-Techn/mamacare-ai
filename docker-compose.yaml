@@ -1,39 +1,133 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:15
-    container_name: rag_postgres
+    container_name: afyamama_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mamacare
     ports:
-      -"5432:5432"
+      - "5432:5432"
     volumes:
-      -postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./pipeline/db/init_db.py:/docker-entrypoint-initdb.d
     networks:
-      - rag_network
+      - afyamama_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  ingestion_service:
-    build: .
-    container_name: rag_ingestion
+  redis:
+    image: redis:7-alpine
+    container_name: afyamama_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - afyamama_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: afyamama_backend
+    restart: always
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mamacare
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+      HF_TOKEN: ${HF_TOKEN:-}
+      PYTHONPATH: /app
+    ports:
+      - "8001:8000"
     volumes:
       - ./data:/app/data
+      - ./scraped_content:/app/scraped_content
+      - ./facebook_posts:/app/facebook_posts
+      - ./faiss_local:/app/faiss_local
     networks:
-      - rag_network
+      - afyamama_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      sh -c "
+        python pipeline/db/init_db.py init &&
+        python pipeline/migration/migrate_existing_data.py &&
+        uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  ui:
+    build: 
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: afyamama_ui
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./ui:/app/ui
+    networks:
+      - afyamama_network
+    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0
+
+  worker:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: afyamama_worker
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mamacare
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+      HF_TOKEN: ${HF_TOKEN:-}
+      PYTHONPATH: /app
+    volumes:
+      - ./data:/app/data
+      - ./scraped_content:/app/scraped_content
+      - ./facebook_posts:/app/facebook_posts
+    networks:
+      - afyamama_network
+    command: celery -A pipeline.tasks worker --loglevel=info
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
-  rag_network:
+  afyamama_network:
     driver: bridge
