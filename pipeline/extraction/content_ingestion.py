@@ -13,9 +13,11 @@ from pipeline.helpers.get_youtube_transcript import get_youtube_transcript
 from pipeline.helpers.transcribe_audio import transcribe_audio_file
 from pipeline.helpers.save_content import save_content_to_file
 from pipeline.helpers.sanitize_filename import sanitize_filename
+from pipeline.helpers.headers import HEADERS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class ContentIngestionService:
     """Enhanced content ingestion service with PostgreSQL storage"""
