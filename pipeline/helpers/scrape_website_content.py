@@ -1,7 +1,7 @@
 import aiohttp
 from bs4 import BeautifulSoup
 
-from pipeline.extraction.content_ingestion import HEADERS
+from pipeline.helpers.headers import HEADERS
 
 
 async def scrape_website_content(url: str) -> str:
