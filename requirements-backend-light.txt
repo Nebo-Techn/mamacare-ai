@@ -1,6 +1,6 @@
-# Core API
+typing
 fastapi
-uvicorn[standard]
+uvicorn
 requests
 pydantic
 
@@ -26,6 +26,7 @@ python-magic
 # Async utilities
 aiofiles
 asyncio-throttle
+tiktoken
 
 # Logging
 structlog
@@ -38,10 +39,6 @@ openpyxl
 # Environment
 python-dotenv
 python-multipart
-
-# Security
-cryptography
-passlib[bcrypt]
 
 # Background tasks
 celery
@@ -56,5 +53,8 @@ pydub
 # YouTube (lightweight)
 youtube-transcript-api
 pytube
+
+# Langchain
+langchain-community
 
 

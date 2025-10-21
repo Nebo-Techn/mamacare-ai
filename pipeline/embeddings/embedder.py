@@ -5,7 +5,7 @@ import numpy as np
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-class AsyncEmbedder:
+class AsyncEmbedder:  
     """
     Async wrapper around LangChain's HuggingFaceEmbeddings.
 

@@ -7,22 +7,16 @@ import os
 import logging
 from typing import List, Optional, Dict, Any
 import uuid
-
-# Import our enhanced services
 from pipeline.services.rag_service import RAGService
 from pipeline.services.document_service import DocumentService
 from pipeline.extraction.content_ingestion import ContentIngestionService
 from pipeline.db.init_db import init_db, check_db_health
 from pipeline.db.connection import get_db
 from pipeline.db.model import Document, Chunk, Interaction
-# Remove heavy model config imports - using existing LLM infrastructure
-
-# Import existing utilities
 from ingest.pdf_loader import extract_text_from_pdf
 from ingest.url_loader import fetch_url_text
 from ingest.chunker import chunk_text
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -32,7 +26,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Add CORS middleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,16 +35,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global services
 rag_service: Optional[RAGService] = None
 document_service: Optional[DocumentService] = None
 ingestion_service: Optional[ContentIngestionService] = None
 
-# Environment variables
 HF_TOKEN = os.environ.get("HF_TOKEN", None)
 LOCAL_MODEL_DIR = os.path.join(os.getcwd(), "lora_maternal_model")
 
-# Pydantic models
 class AskRequest(BaseModel):
     query: str
     k: Optional[int] = 10

@@ -4,6 +4,24 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from pipeline.db.connection import Base
 import uuid
+from sqlalchemy.types import UserDefinedType
+
+class Vector(UserDefinedType):
+    def __init__(self, dimensions):
+        self.dimensions = dimensions
+
+    def get_col_spec(self, **kw):
+        return f"vector({self.dimensions})"
+
+    def bind_processor(self, dialect):
+        def process(value):
+            return value
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            return value
+        return process
 
 class Document(Base):
     """Stores original documents and their metadata"""
@@ -27,12 +45,12 @@ class Chunk(Base):
     """Stores text chunks with embeddings"""
     __tablename__ = "chunks"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
     content = Column(Text, nullable=False)
     chunk_index = Column(Integer, nullable=False)  # Order within document
     token_count = Column(Integer)
-    embedding = Column(ARRAY(Float))  # Vector embedding (fallback to array)
+    embedding = Column(Vector(768))  # Use your actual embedding dimension
     chunk_metadata = Column(Text)  # JSON metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
