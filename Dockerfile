@@ -3,30 +3,36 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    ffmpeg \
-    libmagic1 \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Set environment variables for pip
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DEFAULT_TIMEOUT=100
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# # Install system dependencies
+# RUN apt-get update && apt-get install -y \
+#     build-essential \
+#     curl \
+#     ffmpeg \
+#     libmagic1 \
+#     libpq-dev \
+#     && rm -rf /var/lib/apt/lists/*
 
 # Copy lightweight requirements first for better caching
 COPY requirements-backend-light.txt .
 
-# Install Python dependencies
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements-backend-light.txt
+# Upgrade pip and install dependencies
+RUN pip install --upgrade pip \
+    && pip install --prefer-binary -r requirements-backend-light.txt
+
+
 
 # Copy application code
 COPY . .
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/scraped_content /app/facebook_posts /app/faiss_local
-
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
 
 # Expose ports
 EXPOSE 8000
