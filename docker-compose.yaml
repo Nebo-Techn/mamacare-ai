@@ -40,23 +40,16 @@ services:
   backend:
     build: 
       context: .
-      dockerfile: Dockerfile
-    container_name: afyamama_backend
+      dockerfile: docker/Dockerfile.backend
+    container_name: mamacare_backend
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mamacare
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      REDIS_URL: redis://redis:6379
-      HF_TOKEN: ${HF_TOKEN:-}
-      PYTHONPATH: /app
+    env_file:
+      - .env
     ports:
       - "8001:8000"
     volumes:
@@ -71,18 +64,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    command: >
-      sh -c "
-        python pipeline/db/init_db.py init &&
-        python pipeline/migration/migrate_existing_data.py &&
-        uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-      "
+    command: ["/app/docker/start-backend.sh"]
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: mamacare_worker
+    restart: always
+    depends_on:
+      - backend
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./scraped_content:/app/scraped_content
+      - ./facebook_posts:/app/facebook_posts
+    networks:
+      - mamacare_network
+    command: celery -A pipeline.tasks worker --loglevel=info
 
   ui:
-    build: 
+    build:
       context: .
-      dockerfile: Dockerfile.ui
-    container_name: afyamama_ui
+      dockerfile: docker/Dockerfile.ui
+    container_name: mamacare_ui
     restart: always
     depends_on:
       backend:
@@ -92,41 +98,12 @@ services:
     volumes:
       - ./ui:/app/ui
     networks:
-      - afyamama_network
-    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0
-
-  worker:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    container_name: afyamama_worker
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mamacare
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      REDIS_URL: redis://redis:6379
-      HF_TOKEN: ${HF_TOKEN:-}
-      PYTHONPATH: /app
-    volumes:
-      - ./data:/app/data
-      - ./scraped_content:/app/scraped_content
-      - ./facebook_posts:/app/facebook_posts
-    networks:
-      - afyamama_network
-    command: celery -A pipeline.tasks worker --loglevel=info
+      - mamacare_network
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  afyamama_network:
+  mamacare_network:
     driver: bridge
