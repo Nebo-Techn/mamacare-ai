@@ -45,23 +45,28 @@ class Generator:
 
         tokenizer = AutoTokenizer.from_pretrained(
             self.model_id,
-            use_auth_token=self.hf_token
+            token=self.hf_token
         )
 
-        model = AutoModelForCausabackend.llm.from_pretrained(
-            self.model_id,
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-            device_map="auto",
-            use_auth_token=self.hf_token
-        )
+        model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                token=self.hf_token,
+                device_map=None,  # disables accelerate auto-mapping
+            )
 
-        self._pipeline = hf_pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            device=self.device,
-            return_full_text=True
-        )
+        # If the model was loaded with device_map (accelerate), do NOT pass device to the pipeline
+        pipeline_kwargs = {
+            "model": model,
+            "tokenizer": tokenizer,
+            "return_full_text": True,
+        }
+        if getattr(model, "device_map", None) in (None, {}, "auto") or model.device_map is None:
+            # safe to pass device index (-1 for cpu)
+            pipeline_kwargs["device"] = self.device
+
+        self._pipeline = hf_pipeline("text-generation", **pipeline_kwargs)
 
         try:
             self.llm = HuggingFacePipeline(pipeline=self._pipeline)

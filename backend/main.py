@@ -29,7 +29,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://upgraded-bassoon-g4q9rjxrrjg43vgjq-8501.app.github.dev",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,7 +105,7 @@ async def startup_event():
         ingestion_service = ContentIngestionService()
         
         # Initialize RAG service using existing LLM infrastructure
-        model_id = os.environ.get("HF_MODEL_ID", "microsoft/DialoGPT-medium")
+        model_id = os.environ.get("MODEL_ID", "NeboTech/maternal-swahili-model")
         hf_token = os.environ.get("HF_TOKEN")
         device = os.environ.get("HF_DEVICE", "auto")
         
@@ -120,6 +122,10 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise
+    except asyncio.CancelledError:
+        # logger.warning("Startup cancelled")
+        # raise
+        pass
 
 @app.get("/health")
 async def health_check():
@@ -174,7 +180,7 @@ async def ask_question(body: AskRequest):
         })
         
     except Exception as e:
-        logger.error(f"Failed to process query: {e}")
+        # logger.error(f"Failed to process query: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/feedback")

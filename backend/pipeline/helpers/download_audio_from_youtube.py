@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from backend.pipeline.extraction.content_ingestion import AUDIO_DIR
+from backend.pipeline.contants.contants import AUDIO_DIR
 from backend.pipeline.helpers import sanitize_filename
 
 

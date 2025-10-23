@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any
 import time
+import traceback
 
 # Configure page
 st.set_page_config(
@@ -57,13 +58,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://upgraded-bassoon-g4q9rjxrrjg43vgjq-8001.app.github.dev"
 
 def make_api_request(endpoint: str, method: str = "GET", data: dict = None, files: dict = None) -> Dict[str, Any]:
-    """Make API request with error handling"""
+    """Make API request with detailed debug logging"""
+    url = f"{API_BASE_URL}{endpoint}"
+    # st.text(f"Making {method} request to: {url}")
+    # st.text(f"Data: {data}")
+    # st.text(f"Files: {files}")
+
     try:
-        url = f"{API_BASE_URL}{endpoint}"
-        
         if method == "GET":
             response = requests.get(url)
         elif method == "POST":
@@ -75,18 +79,25 @@ def make_api_request(endpoint: str, method: str = "GET", data: dict = None, file
             response = requests.delete(url)
         else:
             raise ValueError(f"Unsupported method: {method}")
-        
+
+        st.text(f"Response status code: {response.status_code}")
         response.raise_for_status()
+        st.text(f"Response content: {response.text}")
         return response.json()
     
-    except requests.exceptions.ConnectionError:
-        st.error("Cannot connect to API server. Please ensure the backend is running on port 8000.")
+    except requests.exceptions.ConnectionError as e:
+        st.error("connect to API server. Please ensure the backend is running on port 8000.")
+        st.error(f"ConnectionError: {e}")
+        st.text(traceback.format_exc())
+        st.header(f"URL tried: {url}")
         return {"error": "Connection failed"}
     except requests.exceptions.HTTPError as e:
-        st.error(f"API Error: {e}")
+        st.error(f"API HTTPError: {e}")
+        st.text(traceback.format_exc())
         return {"error": str(e)}
     except Exception as e:
         st.error(f"Unexpected error: {e}")
+        st.text(traceback.format_exc())
         return {"error": str(e)}
 
 def check_api_health() -> bool:
@@ -105,27 +116,19 @@ st.markdown("""
 # Sidebar
 with st.sidebar:
     st.header("🔧 System Status")
+
     
     # Health check
     if check_api_health():
         st.success("API Connected")
-        
-        # Get system stats
-        stats = make_api_request("/stats")
-        if "error" not in stats:
-            st.metric("📄 Documents", stats.get("total_documents", 0))
-            st.metric("🧩 Chunks", stats.get("total_chunks", 0))
-            st.metric("💬 Interactions", stats.get("total_interactions", 0))
-            st.metric("⭐ Avg Rating", f"{stats.get('average_rating', 0):.1f}")
     else:
         st.error("API Disconnected")
         st.stop()
 
 # Main tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab4, tab5 = st.tabs([
     "💬 Ask Questions", 
-    "📄 Document Management", 
-    "📊 Analytics", 
+    "📄 Document Management",  
     "🔄 Data Migration", 
     "⚙️ System Admin"
 ])
@@ -225,9 +228,9 @@ with tab2:
                     result = make_api_request("/upload_pdf", "POST", files=files)
                     
                     if "error" not in result:
-                        st.success(f"✅ {file.name}: {result['chunks_created']} chunks created")
+                        st.success(f"{file.name}: {result['chunks_created']} chunks created")
                     else:
-                        st.error(f"❌ {file.name}: {result['error']}")
+                        st.error(f"{file.name}: {result['error']}")
     
     elif upload_type == "URL":
         url = st.text_input("Enter URL:")
@@ -237,9 +240,9 @@ with tab2:
                 result = make_api_request("/upload_url", "POST", {"url": url, "title": title})
                 
                 if "error" not in result:
-                    st.success(f"✅ {result['title']}: {result['chunks_created']} chunks created")
+                    st.success(f"{result['title']}: {result['chunks_created']} chunks created")
                 else:
-                    st.error(f"❌ {result['error']}")
+                    st.error(f"{result['error']}")
     
     elif upload_type == "YouTube":
         youtube_url = st.text_input("Enter YouTube URL:")
@@ -249,9 +252,9 @@ with tab2:
                 result = make_api_request("/upload_youtube", "POST", {"url": youtube_url, "title": youtube_title})
                 
                 if "error" not in result:
-                    st.success(f"✅ {result['title']}: {result['chunks_created']} chunks created")
+                    st.success(f"{result['title']}: {result['chunks_created']} chunks created")
                 else:
-                    st.error(f"❌ {result['error']}")
+                    st.error(f"{result['error']}")
     
     elif upload_type == "Facebook":
         facebook_url = st.text_input("Enter Facebook post URL:")
@@ -261,9 +264,9 @@ with tab2:
                 result = make_api_request("/upload_facebook", "POST", {"url": facebook_url, "title": facebook_title})
                 
                 if "error" not in result:
-                    st.success(f"✅ {result['title']}: {result['chunks_created']} chunks created")
+                    st.success(f"{result['title']}: {result['chunks_created']} chunks created")
                 else:
-                    st.error(f"❌ {result['error']}")
+                    st.error(f"{result['error']}")
     
     # Document list section
     st.subheader("📋 Document List")
@@ -301,45 +304,6 @@ with tab2:
         else:
             st.info("No documents found")
 
-# Tab 3: Analytics
-with tab3:
-    st.header("📊 System Analytics")
-    
-    # System stats
-    stats = make_api_request("/stats")
-    if "error" not in stats:
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("📄 Total Documents", stats.get("total_documents", 0))
-        with col2:
-            st.metric("🧩 Total Chunks", stats.get("total_chunks", 0))
-        with col3:
-            st.metric("💬 Total Interactions", stats.get("total_interactions", 0))
-        with col4:
-            st.metric("⭐ Average Rating", f"{stats.get('average_rating', 0):.1f}")
-        
-        # Top sources
-        if stats.get("top_sources"):
-            st.subheader("🏆 Top Sources")
-            for source in stats["top_sources"][:10]:
-                st.markdown(f"**{source['title']}** ({source['type']}) - {source['usage_count']} uses")
-    
-    # Interaction history
-    st.subheader("💬 Recent Interactions")
-    interactions = make_api_request("/interactions?limit=20")
-    
-    if "error" not in interactions and interactions.get("interactions"):
-        for interaction in interactions["interactions"][:10]:
-            with st.expander(f"Q: {interaction['query'][:50]}..."):
-                st.markdown(f"**Question:** {interaction['query']}")
-                st.markdown(f"**Answer:** {interaction['answer']}")
-                st.markdown(f"**Score:** {interaction.get('retrieval_score', 0):.2f}")
-                if interaction.get('user_feedback'):
-                    st.markdown(f"**Feedback:** {interaction['user_feedback']}")
-                if interaction.get('feedback_rating'):
-                    st.markdown(f"**Rating:** {'⭐' * interaction['feedback_rating']}")
-
 # Tab 4: Data Migration
 with tab4:
     st.header("🔄 Data Migration")
@@ -348,15 +312,15 @@ with tab4:
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("🔄 Migrate Existing Chunks & Q&A"):
+        if st.button("Migrate Existing Chunks & Q&A"):
             with st.spinner("Migrating existing data..."):
                 result = make_api_request("/migrate/existing-data", "POST")
                 
                 if "error" not in result:
-                    st.success("✅ Migration completed successfully!")
-                    st.json(result["results"])
-        else:
-                    st.error(f"❌ Migration failed: {result['error']}")
+                    st.success("Migration completed successfully!")
+                    st.json(result.get("results"))
+                else:
+                    st.error(f"Migration failed: {result['error']}")
     
     with col2:
         if st.button("📄 Migrate Scraped Content"):
