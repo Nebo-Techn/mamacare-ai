@@ -1,7 +1,7 @@
 from pathlib import Path
-from pipeline.db.connection import async_session
-from pipeline.db.model import ExtractedContent
-from pipeline.helpers import sanitize_filename
+from backend.pipeline.db.connection import async_session
+from backend.pipeline.db.model import ExtractedContent
+from backend.pipeline.helpers import sanitize_filename
 
 TEXT_DIR = Path("data/texts")
 TEXT_DIR.mkdir(parents=True, exist_ok=True)

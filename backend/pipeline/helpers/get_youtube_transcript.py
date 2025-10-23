@@ -1,4 +1,4 @@
-from pipeline.helpers import download_audio_from_youtube, transcribe_audio
+from backend.pipeline.helpers import download_audio_from_youtube, transcribe_audio
 
 
 async def get_youtube_transcript(url: str, name: str) -> str:

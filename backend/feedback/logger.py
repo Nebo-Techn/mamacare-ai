@@ -2,7 +2,7 @@ import aiofiles
 import json
 from typing import List
 
-from feedback.schema import FeedbackSchema
+from backend.feedback.schema import FeedbackSchema
 
 RESULT_FILE = "feedback/result.json"
 

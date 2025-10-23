@@ -4,16 +4,16 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
 
-from pipeline.db.connection import async_session
-from pipeline.db.model import Document, Chunk
-from pipeline.services.document_service import DocumentService
-from pipeline.helpers.scrape_website_content import scrape_website_content
-from pipeline.helpers.facebook_scraper import scrape_facebook_content
-from pipeline.helpers.get_youtube_transcript import get_youtube_transcript
-from pipeline.helpers.transcribe_audio import transcribe_audio_file
-from pipeline.helpers.save_content import save_content_to_file
-from pipeline.helpers.sanitize_filename import sanitize_filename
-
+from backend.pipeline.db.connection import async_session
+from backend.pipeline.db.model import Document, Chunk
+from backend.pipeline.services.document_service import DocumentService
+from backend.pipeline.helpers.scrape_website_content import scrape_website_content
+from backend.pipeline.helpers.facebook_scraper import scrape_facebook_content
+from backend.pipeline.helpers.get_youtube_transcript import get_youtube_transcript
+from backend.pipeline.helpers.transcribe_audio import transcribe_audio_file
+from backend.pipeline.helpers.save_content import save_content_to_file
+from backend.pipeline.helpers.sanitize_filename import sanitize_filename
+from backend.pipeline.helpers.headers import HEADERS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
-from pipeline.extraction.content_ingestion import AUDIO_DIR
-from pipeline.helpers import sanitize_filename
+from backend.pipeline.extraction.content_ingestion import AUDIO_DIR
+from backend.pipeline.helpers import sanitize_filename
 
 
 async def download_audio_from_youtube(url: str, name: str) -> Path:

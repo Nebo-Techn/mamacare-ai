@@ -2,13 +2,14 @@ import asyncio
 import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
-from pipeline.db.connection import async_session
-from pipeline.db.model import Interaction
-from pipeline.services.document_service import DocumentService
-from pipeline.embeddings.embedder import AsyncEmbedder
-from llm.generator import Generator
-from llm.prompter import build_rag_prompt, preprocess_chunks
+from backend.pipeline.db.connection import async_session
+from backend.pipeline.db.model import Interaction
+from backend.pipeline.services.document_service import DocumentService
+from backend.pipeline.embeddings.embedder import AsyncEmbedder
+from backend.llm.generator import Generator
+from backend.llm.prompter import build_rag_prompt, preprocess_chunks
 from sqlalchemy import select
 import json
 
@@ -194,20 +195,17 @@ class RAGService:
         
         async with async_session() as session:
             # Get feedback statistics
-            feedback_result = await session.execute(
-                "SELECT AVG(feedback_rating) as avg_rating, COUNT(*) as total_feedback FROM interactions WHERE feedback_rating IS NOT NULL"
-            )
+            feedback_result = await session.execute(text(
+                "SELECT AVG(feedback_rating) as avg_rating, COUNT(*) as total_feedback "
+                "FROM interactions WHERE feedback_rating IS NOT NULL"
+            ))
             feedback_stats = feedback_result.fetchone()
             
             # Get top sources
-            sources_result = await session.execute("""
-                SELECT d.title, d.source_type, COUNT(i.id) as usage_count
-                FROM documents d
-                LEFT JOIN interactions i ON d.id = i.document_id
-                GROUP BY d.id, d.title, d.source_type
-                ORDER BY usage_count DESC
-                LIMIT 10
-            """)
+            sources_result = await session.execute(text("""
+                SELECT source, COUNT(*) as cnt FROM documents
+                GROUP BY source ORDER BY cnt DESC LIMIT 10
+            """))
             top_sources = [
                 {
                     "title": row.title,

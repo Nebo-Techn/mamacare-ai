@@ -7,7 +7,7 @@ from typing import List
 from langchain.vectorstores import PGVector
 from langchain.schema import Document
 
-from pipeline.embeddings.embedder import AsyncEmbedder
+from backend.pipeline.embeddings.embedder import AsyncEmbedder
 
 # Load Postgres connection from Docker environment variables
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")

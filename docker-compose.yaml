@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - afyamama_network
+      - mamacare_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -23,14 +23,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: afyamama_redis
+    container_name: mamacare_redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - afyamama_network
+      - mamacare_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -58,7 +58,7 @@ services:
       - ./facebook_posts:/app/facebook_posts
       - ./faiss_local:/app/faiss_local
     networks:
-      - afyamama_network
+      - mamacare_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -82,7 +82,7 @@ services:
       - ./facebook_posts:/app/facebook_posts
     networks:
       - mamacare_network
-    command: celery -A pipeline.tasks worker --loglevel=info
+    command: celery -A backend.pipeline.tasks worker --loglevel=info
 
   ui:
     build:

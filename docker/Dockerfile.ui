@@ -1,4 +1,4 @@
-FROM mamacare-base AS mamacare-ui
+FROM mamacare-base:latest AS mamacare-ui
 
 WORKDIR /app
 

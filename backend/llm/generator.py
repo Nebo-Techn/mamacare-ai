@@ -48,7 +48,7 @@ class Generator:
             use_auth_token=self.hf_token
         )
 
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForCausabackend.llm.from_pretrained(
             self.model_id,
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
             device_map="auto",
@@ -72,7 +72,7 @@ class Generator:
 
     async def generate(self, prompt: str, max_new_tokens: int = 256, do_sample: bool = False) -> str:
         """
-        Async wrapper around the transformers text-generation pipeline.
+        Async wrapper around the transformers text-generation backend.pipeline.
         """
         if self._pipeline is None:
             raise RuntimeError("No model initialized.")

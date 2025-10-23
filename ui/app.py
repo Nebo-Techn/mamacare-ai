@@ -194,7 +194,7 @@ with tab1:
                 if st.button("Submit Feedback") and result.get("interaction_id"):
                     feedback_result = make_api_request("/feedback", "POST", {
                         "interaction_id": result["interaction_id"],
-                        "feedback": feedback if feedback.strip() else None,
+                        "feedback": feedback if backend.feedback.strip() else None,
                         "rating": rating
                     })
                     

@@ -5,7 +5,7 @@ from functools import wraps
 import logging
 from datetime import datetime
 
-from pipeline.utils.logger import log_error, log_system_event
+from backend.pipeline.utils.logger import log_error, log_system_event
 
 logger = logging.getLogger(__name__)
 
