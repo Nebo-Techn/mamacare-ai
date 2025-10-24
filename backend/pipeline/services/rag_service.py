@@ -24,18 +24,14 @@ class RAGService:
     
     def __init__(
         self, 
-        model_id: str = os.getenv("HF_MODEL_ID", "NeboTech/maternal-swahili-model"),
-        hf_token: Optional[str] = None,
-        device: str = "auto"
+        endpoint_url: str,
     ):
         self.document_service = DocumentService()
         self.embedder = AsyncEmbedder()
         
         # Use existing LLM generator
         self.llm_generator = Generator(
-            model_id=model_id,
-            hf_token=hf_token,
-            device=device
+            endpoint_url=endpoint_url
         )
     
     async def process_query(self,query: str,k: int = 10,similarity_threshold: float = 0.7,include_sources: bool = True) -> Dict[str, Any]:
