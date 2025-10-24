@@ -59,11 +59,11 @@ jobs:
         push: true
         tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-latest
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-${{ github.sha }}
-        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-base
-        cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-base,mode=max
-    
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-${{ github.sha }}
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-latest
+        cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base-latest,mode=max
+
     - name: Build and push BACKEND image
       uses: docker/build-push-action@v2
       with:
