@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ lower(github.repository) }} # takes the name of the repository. 
+  IMAGE_NAME: nebo-techn/mamacare-ai # takes the name of the repository. 
 
 jobs:
 
