@@ -108,15 +108,14 @@ async def startup_event():
         model_id = os.environ.get("MODEL_ID", "NeboTech/maternal-swahili-model")
         hf_token = os.environ.get("HF_TOKEN")
         device = os.environ.get("HF_DEVICE", "auto")
+        endpoint_url = os.environ.get("VLLM_ENDPOINT_URL", "http://your-vllm-ip:8000/generate")
         
         rag_service = RAGService(
-            model_id=model_id,
-            hf_token=hf_token,
-            device=device
+            endpoint_url=endpoint_url
         )
-        
-        logger.info(f"Initialized RAG service with model: {model_id}")
-        
+
+        logger.info(f"Initialized RAG service with endpoint: {endpoint_url}")
+
         logger.info("All services initialized successfully")
         
     except Exception as e:
