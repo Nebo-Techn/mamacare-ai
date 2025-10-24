@@ -1,4 +1,4 @@
-FROM mamacare-base:latest AS mamacare-rag-backend
+FROM ghcr.io/nebo-techn/mamacare-ai:base-latest AS mamacare-rag-backend
 
 WORKDIR /app
 
