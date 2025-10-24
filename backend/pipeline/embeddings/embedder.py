@@ -40,7 +40,7 @@ class AsyncEmbedder:
             chunks = pickle.load(f)
         texts = [chunk["text"] for chunk in chunks]
 
-        embedder = AsyncEmbedder(model_name=model_name or "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device=device)
+        embedder = AsyncEmbedder(model_name="intfloat/multilingual-e5-large", device=device)
         embeddings = await embedder.embed_texts(texts)
         embeddings = np.array(embeddings)
 
