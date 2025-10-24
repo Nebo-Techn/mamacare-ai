@@ -42,16 +42,5 @@ async def retrieve_relevant_chunks(query: str, index_path: str, meta_path: str, 
             "text": chunk["text"],
             "source": chunk.get("source", "")
         })
-    # Sort by score (ascending: most relevant first)
     results.sort(key=lambda x: x["score"])
     return results
-
-# Usage example:
-# results = asyncio.run(retrieve_relevant_chunks(
-#     "Dalili za mimba changa ni zipi?",
-#     "faiss_index.bin",
-#     "faiss_meta.pkl",
-#     k=10,  # Increase k for more context
-#     min_score=0.0  # Optionally filter by score
-# ))
-# print(results)
