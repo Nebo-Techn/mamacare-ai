@@ -1,19 +1,26 @@
-FROM mamacare-base AS mamacare-ui
+# official Node.js image
+FROM node:20-alpine
 
-WORKDIR /app
+# Set working directory to the ui folder
+WORKDIR /app/ui
 
-# Copy UI-specific dependencies
-COPY ui/requirements-ui.txt .
-RUN pip install --no-cache-dir -r requirements-ui.txt
+# Copy package files from the ui folder only (use package-lock if present)
+COPY ui/package*.json ./
 
+# Install dependencies
+RUN npm ci --legacy-peer-deps --silent
 
-# Copy UI code
-COPY ui/ /app
+# Copy only ui sources into the working dir
+COPY ui/ ./
 
+# Build the app
+RUN npm run build
 
-# Expose Streamlit port
-EXPOSE 8501
+# Runtime environment
+ENV NODE_ENV=production
+ENV PORT=3000
 
-# Run Streamlit app
+EXPOSE 3000
 
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Start the application (adjust if your start file/path differs)
+CMD ["node", "server.js"]
