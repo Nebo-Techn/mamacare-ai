@@ -1,26 +1,28 @@
-# official Node.js image
+# Use official Node image
 FROM node:20-alpine
 
-# Set working directory to the ui folder
+# Set working directory
 WORKDIR /app/ui
 
-# Copy package files from the ui folder only (use package-lock if present)
+# Copy only dependency files first for caching
 COPY ui/package*.json ./
 
-# Install dependencies
+# Install dependencies (using legacy flag to avoid React 19 peer issues)
 RUN npm install --legacy-peer-deps
 
-# Copy only ui sources into the working dir
+# Copy the rest of the UI source code
 COPY ui/ ./
 
-# Build the app
+# Build the Next.js app (standalone for production)
 RUN npm run build
 
-# Runtime environment
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Expose port
 EXPOSE 3000
 
-# Start the application (adjust if your start file/path differs)
-CMD ["node", "server.js"]
+# Start Next.js (no `server.js` needed)
+# use npx so the installed next binary is invoked reliably
+CMD ["npx", "next", "start", "-p", "3000"]
