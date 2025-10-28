@@ -37,9 +37,8 @@ class Generator:
                     self.endpoint_url,
                     json=payload
                 )
-                response.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
-
-                # Assuming vLLM standard output format:
+                response.raise_for_status()
+                
                 # {"text": [generated_text_1, generated_text_2, ...]}
                 data = response.json()
                 
