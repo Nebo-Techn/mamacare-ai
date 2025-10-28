@@ -7,9 +7,9 @@ import asyncio
 from embeddings.embedder import AsyncEmbedder
 from vectorstore.faiss_store import AsyncFaissStore
 from query.retriever import retrieve_relevant_chunks
-from llm.prompter import build_rag_prompt, preprocess_chunks
-from llm.generator import AsyncLLMGenerator
-from feedback.logger import log_feedback
+from backend.llm.prompter import build_rag_prompt, preprocess_chunks
+from backend.llm.generator import AsyncLLMGenerator
+from backend.feedback.logger import log_feedback
 
 
 async def main():

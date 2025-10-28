@@ -1,7 +1,7 @@
 import asyncio
 import asyncpg
-from pipeline.db.connection import engine, Base, DATABASE_URL
-from pipeline.db.model import Document, Chunk, Interaction, ExtractedContent
+from backend.pipeline.db.connection import engine, Base, DATABASE_URL
+from backend.pipeline.db.model import Document, Chunk, Interaction, ExtractedContent
 import logging
 
 logging.basicConfig(level=logging.INFO)

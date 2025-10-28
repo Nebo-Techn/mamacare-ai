@@ -2,13 +2,13 @@ import asyncio
 import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, text
 from sqlalchemy.orm import selectinload
 
-from pipeline.db.connection import async_session
-from pipeline.db.model import Document, Chunk, Interaction
-from pipeline.embeddings.embedder import AsyncEmbedder
-from ingest.chunker import chunk_text
+from backend.pipeline.db.connection import async_session
+from backend.pipeline.db.model import Document, Chunk, Interaction
+from backend.pipeline.embeddings.embedder import AsyncEmbedder
+from backend.ingest.chunker import chunk_text
 import json
 
 class DocumentService:
@@ -50,21 +50,21 @@ class DocumentService:
     ) -> List[Chunk]:
         """Chunk document content and create embeddings"""
         # Chunk the content
-        chunks_text = await chunk_text(content, chunk_size, overlap)
+        chunks_text = chunk_text(content, chunk_size, overlap)
         
         # Create embeddings for all chunks
         embeddings = await self.embedder.embed_texts(chunks_text)
         
         async with async_session() as session:
             chunks = []
-            for i, (chunk_text, embedding) in enumerate(zip(chunks_text, embeddings)):
+            for i, (chunk_content, embedding) in enumerate(zip(chunks_text, embeddings)):
                 chunk = Chunk(
                     document_id=document_id,
-                    content=chunk_text,
+                    content=chunk_content,
                     chunk_index=i,
-                    token_count=len(chunk_text.split()),
+                    token_count=len(chunk_content.split()),
                     embedding=embedding,
-                    chunk_metadata=json.dumps({"chunk_size": len(chunk_text), "overlap": overlap})
+                    chunk_metadata=json.dumps({"chunk_size": len(chunk_content), "overlap": overlap})
                 )
                 session.add(chunk)
                 chunks.append(chunk)
@@ -103,21 +103,22 @@ class DocumentService:
         async with async_session() as session:
             try:
                 # Try pgvector similarity search first
-                query = """
-                SELECT c.id, c.content, c.chunk_index, c.chunk_metadata,
-                       d.title, d.source_url, d.source_type,
-                       1 - (c.embedding <=> %s) as similarity
-                FROM chunks c
-                JOIN documents d ON c.document_id = d.id
-                WHERE 1 - (c.embedding <=> %s) > %s
-                ORDER BY c.embedding <=> %s
-                LIMIT %s
-                """
-                
+                query = text("""
+                    SELECT c.id, c.content, c.chunk_index, c.chunk_metadata,
+                        d.title, d.source_url, d.source_type,
+                        1 - (c.embedding <=> :embedding) as similarity
+                    FROM chunks c
+                    JOIN documents d ON c.document_id = d.id
+                    WHERE 1 - (c.embedding <=> :embedding) > :threshold
+                    ORDER BY c.embedding <=> :embedding
+                    LIMIT :limit
+                    """)
+
                 result = await session.execute(
-                    query,
-                    (query_embedding, query_embedding, similarity_threshold, query_embedding, limit)
-                )
+                        query,
+                        {"embedding": query_embedding, "threshold": similarity_threshold, "limit": limit}
+                    )
+
                 
                 chunks = []
                 for row in result:
@@ -203,19 +204,14 @@ class DocumentService:
         """Get statistics about documents and chunks"""
         async with async_session() as session:
             # Count documents
-            doc_count_result = await session.execute("SELECT COUNT(*) FROM documents")
-            doc_count = doc_count_result.scalar()
-            
-            # Count chunks
-            chunk_count_result = await session.execute("SELECT COUNT(*) FROM chunks")
-            chunk_count = chunk_count_result.scalar()
-            
-            # Count interactions
-            interaction_count_result = await session.execute("SELECT COUNT(*) FROM interactions")
-            interaction_count = interaction_count_result.scalar()
+            doc_count_result = await session.execute(text("SELECT COUNT(*) FROM documents"))
+            # before: chunk_count_result = await session.execute("SELECT COUNT(*) FROM chunks")
+            chunk_count_result = await session.execute(text("SELECT COUNT(*) FROM chunks"))
+            # before: interaction_count_result = await session.execute("SELECT COUNT(*) FROM interactions")
+            interaction_count_result = await session.execute(text("SELECT COUNT(*) FROM interactions"))
             
             return {
-                "total_documents": doc_count,
-                "total_chunks": chunk_count,
-                "total_interactions": interaction_count
+                "total_documents": doc_count_result.scalar(),
+                "total_chunks": chunk_count_result.scalar(),
+                "total_interactions": interaction_count_result.scalar()
             }

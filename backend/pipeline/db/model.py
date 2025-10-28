@@ -2,25 +2,54 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKe
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from pipeline.db.connection import Base
+from backend.pipeline.db.connection import Base
 import uuid
 from sqlalchemy.types import UserDefinedType
 
 class Vector(UserDefinedType):
-    def __init__(self, dimensions):
-        self.dimensions = dimensions
+    """UserDefinedType to represent pgvector columns and handle Python <-> pgvector conversion.
+    Accepts an optional dimension so Column(Vector(768)) works.
+    """
+
+    def __init__(self, dim: int | None = None):
+        self.dim = int(dim) if dim is not None else None
 
     def get_col_spec(self, **kw):
-        return f"vector({self.dimensions})"
+        return f"vector({self.dim})" if self.dim else "vector"
 
     def bind_processor(self, dialect):
+        """Convert Python list/iterable -> pgvector literal string before sending to DB."""
         def process(value):
+            if value is None:
+                return None
+            if isinstance(value, (str, bytes)):
+                return value
+            try:
+                if hasattr(value, "__iter__"):
+                    return "[" + ",".join(str(float(x)) for x in value) + "]"
+            except Exception:
+                return str(value)
             return value
         return process
 
     def result_processor(self, dialect, coltype):
+        """Convert pgvector textual representation back to Python list (if returned as text)."""
         def process(value):
-            return value
+            if value is None:
+                return None
+            if isinstance(value, (list, tuple)):
+                return list(value)
+            if isinstance(value, str):
+                v = value.strip()
+                if v.startswith("[") and v.endswith("]"):
+                    inner = v[1:-1].strip()
+                    if not inner:
+                        return []
+                    return [float(x) for x in inner.split(",")]
+            try:
+                return list(value)
+            except Exception:
+                return value
         return process
 
 class Document(Base):

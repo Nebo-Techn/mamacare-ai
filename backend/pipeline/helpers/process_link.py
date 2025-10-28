@@ -1,8 +1,8 @@
 import asyncio
 from typing import Dict
 
-from pipeline.helpers import get_youtube_transcript, save_content, scrape_website_content
-from pipeline.helpers.facebook_scraper import extract_facebook_post
+from backend.pipeline.helpers import get_youtube_transcript, save_content, scrape_website_content
+from backend.pipeline.helpers.facebook_scraper import extract_facebook_post
 
 
 async def process_link(name: str, url: str):

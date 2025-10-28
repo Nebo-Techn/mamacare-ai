@@ -7,15 +7,15 @@ import os
 import logging
 from typing import List, Optional, Dict, Any
 import uuid
-from pipeline.services.rag_service import RAGService
-from pipeline.services.document_service import DocumentService
-from pipeline.extraction.content_ingestion import ContentIngestionService
-from pipeline.db.init_db import init_db, check_db_health
-from pipeline.db.connection import get_db
-from pipeline.db.model import Document, Chunk, Interaction
-from ingest.pdf_loader import extract_text_from_pdf
-from ingest.url_loader import fetch_url_text
-from ingest.chunker import chunk_text
+from backend.pipeline.services.rag_service import RAGService
+from backend.pipeline.services.document_service import DocumentService
+from backend.pipeline.extraction.content_ingestion import ContentIngestionService
+from backend.pipeline.db.init_db import init_db, check_db_health
+from backend.pipeline.db.connection import get_db
+from backend.pipeline.db.model import Document, Chunk, Interaction
+from backend.ingest.pdf_loader import extract_text_from_pdf
+from backend.ingest.url_loader import fetch_url_text
+from backend.ingest.chunker import chunk_text
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,7 +29,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://upgraded-bassoon-g4q9rjxrrjg43vgjq-8501.app.github.dev",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,6 +73,13 @@ class SystemStatsResponse(BaseModel):
     total_feedback: int
     top_sources: List[Dict[str, Any]]
 
+# Import startup actions lazily so startup errors are clearer
+try:
+    from backend.pipeline.db.init_db import init_db, check_db_health  # noqa: E402
+except Exception:
+    init_db = None
+    check_db_health = None
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
@@ -79,36 +88,43 @@ async def startup_event():
     try:
         logger.info("🚀 Starting Afyamama AI RAG API")
         
-        # Initialize database
-        await init_db()
-        
-        # Check database health
-        db_healthy = await check_db_health()
-        if not db_healthy:
-            raise Exception("Database health check failed")
+        if init_db:
+            try:
+                # Initialize database
+                await init_db()
+                
+                # Check database health
+                db_healthy = await check_db_health() if check_db_health else True
+                if not db_healthy:
+                    logger.warning("Database health check failed on startup")
+            except Exception as e:
+                logger.exception("Database init failed: %s", e)
         
         # Initialize services
         document_service = DocumentService()
         ingestion_service = ContentIngestionService()
         
         # Initialize RAG service using existing LLM infrastructure
-        model_id = os.environ.get("HF_MODEL_ID", "microsoft/DialoGPT-medium")
+        model_id = os.environ.get("MODEL_ID", "NeboTech/maternal-swahili-model")
         hf_token = os.environ.get("HF_TOKEN")
         device = os.environ.get("HF_DEVICE", "auto")
+        endpoint_url = os.environ.get("VLLM_ENDPOINT_URL", "http://your-vllm-ip:8000/generate")
         
         rag_service = RAGService(
-            model_id=model_id,
-            hf_token=hf_token,
-            device=device
+            endpoint_url=endpoint_url
         )
-        
-        logger.info(f"Initialized RAG service with model: {model_id}")
-        
+
+        logger.info(f"Initialized RAG service with endpoint: {endpoint_url}")
+
         logger.info("All services initialized successfully")
         
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise
+    except asyncio.CancelledError:
+        # logger.warning("Startup cancelled")
+        # raise
+        pass
 
 @app.get("/health")
 async def health_check():
@@ -163,7 +179,7 @@ async def ask_question(body: AskRequest):
         })
         
     except Exception as e:
-        logger.error(f"Failed to process query: {e}")
+        # logger.error(f"Failed to process query: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/feedback")
@@ -456,7 +472,7 @@ async def reindex_document(document_id: str):
 async def migrate_existing_data():
     """Migrate existing data to PostgreSQL"""
     try:
-        from pipeline.migration.migrate_existing_data import DataMigrationService
+        from backend.pipeline.migration.migrate_existing_data import DataMigrationService
         
         migration_service = DataMigrationService()
         results = await migration_service.migrate_existing_chunks()
@@ -474,7 +490,7 @@ async def migrate_existing_data():
 async def migrate_scraped_content():
     """Migrate scraped content to PostgreSQL"""
     try:
-        from pipeline.migration.migrate_existing_data import DataMigrationService
+        from backend.pipeline.migration.migrate_existing_data import DataMigrationService
         
         migration_service = DataMigrationService()
         results = await migration_service.migrate_scraped_content()
@@ -488,6 +504,11 @@ async def migrate_scraped_content():
         logger.error(f"Scraped content migration failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "Afyamama AI RAG API running"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, log_level="info")

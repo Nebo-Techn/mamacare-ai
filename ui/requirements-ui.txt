@@ -1,0 +1,5 @@
+# UI-specific requirements (minimal)
+streamlit
+requests
+python-dotenv
+pandas

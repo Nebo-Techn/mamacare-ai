@@ -69,7 +69,7 @@ class FacebookExtractor:
 
 
 async def extract_facebook_post(url: str, name: str) -> str:
-    """Wrapper function for quick use in ingestion pipeline."""
+    """Wrapper function for quick use in ingestion backend.pipeline."""
     fb_email = os.getenv("FACEBOOK_EMAIL")
     fb_pass = os.getenv("FACEBOOK_PASSWORD")
 
