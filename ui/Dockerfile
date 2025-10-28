@@ -5,7 +5,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package.json 
-COPY package.json ./
+COPY ui/package.json ./
 
 # Install dependencies using npm
 RUN npm install --legacy-peer-deps
